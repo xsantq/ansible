@@ -6,20 +6,30 @@
   pre_tasks:
 
 
-  - name: install updates (CentOS) 
+  - name: update repo cache (CentOS) 
     tags: always
     dnf: 
-      update_only: yes
       update_cache: yes
+    changed_when: false
     when: ansible_distribution == "CentOS"
  
-  - name: install updates (Ubuntu) 
+  - name: update repo cache (Ubuntu) 
     tags: always
     apt: 
-      upgrade: dist
       update_cache: yes
+    changed_when: false
     when: ansible_distribution == "Ubuntu"
 
+- hosts: all
+  become: true
+  tasks:
+
+  - name: add ssh key for simone
+    tags: always
+    authorized_key:
+      user: simone
+      key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE9XOY8wUTfdt+ejpiXr1Ov2TeoO3Tyb2SmrD/rg8EaU ansible"
+  
 - hosts: workstations
   become: true
   tasks: 
@@ -60,7 +70,32 @@
          - php
        state: latest
      when: ansible_distribution == "CentOS"
-    
+   
+   - name: start httpd service on CentOS
+     tags: apache httpd, CentOS
+     service:
+       name: httpd
+       state: started
+       enabled: yes
+     when: ansible_distribution == "CentOS"   
+   
+   - name: change email address for admin
+     tags: apache,ubuntu
+     lineinfile: 
+       path: /etc/apache2/sites-available/000-default.conf
+       regexp: '^ServerAdmin webmaster@localhost'
+       line: ServerAdmin somebody@somewhere.net
+     when: ansible_distribution == "Ubuntu"
+     register: apache2
+   
+   - name: restart apache2 service(Ubuntu)
+     tags: apache,ubuntu
+     service:
+       name: apache2
+       state: restarted
+     when: apache2.changed  
+         
+ 
    - name: copy default html for site
      tags: apache,apache2,httpd
      copy: 
@@ -98,7 +133,13 @@
       name: samba    
       state: latest
 
- 
+  - name: disable and stop samba service
+    tags: samba
+    service:
+      name: smbd
+      state: stopped
+      enabled: no
+     
 
 
 
