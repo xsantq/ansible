@@ -1,0 +1,14 @@
+- name: install samba file server
+  tags: samba
+  package:
+    name: samba
+    state: latest
+
+- name: disable and stop samba service
+  tags: samba
+  service:
+    name: smbd
+    state: stopped
+    enabled: no
+
+
